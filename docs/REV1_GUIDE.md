@@ -172,8 +172,51 @@ Use female-to-female Dupont jumpers, or a 5-wire harness soldered to a 2×20 fem
 
 ### D1. OS
 - If A1 shows **Bookworm or later, 32-bit Lite**: keep it. Rev 1 has no display driver to constrain the OS, and your Raspberry Pi Connect setup already works.
-- If it shows **Desktop**: it will work, but the desktop's audio server can grab the sound card. **STOP** and say so, because Lite is simpler.
 - If it shows **Bullseye or older**: **STOP**. The paths in this guide (`/boot/firmware`, `pinctrl`) assume Bookworm or later.
+
+`os-release` doesn't say whether you have Lite or Desktop. Check:
+```bash
+systemctl get-default; systemctl --user is-active pipewire
+```
+**Lite looks like:** `multi-user.target` and `inactive`. Go on to D2.
+
+**Desktop looks like:** `graphical.target` and `active`. PipeWire takes over the default sound output and sends it to HDMI. `speaker-test` then "finishes normally" but the jack stays silent.
+
+#### D1a. Desktop image: test the jack without PipeWire, then switch to console boot
+First, prove the jack works. This stops PipeWire only until the next reboot:
+```bash
+systemctl --user stop pipewire.socket pipewire-pulse.socket pipewire pipewire-pulse wireplumber
+```
+```bash
+speaker-test -D plughw:CARD=Headphones,DEV=0 -c 2 -t wav -l 1
+```
+**Success looks like:** "Front Left", then "Front Right" from the speaker. If it's silent, check the cable, the plug seating and the speaker (try it on a phone) before going on.
+
+Then make it permanent. This keeps Raspberry Pi Connect, turns PipeWire off and boots to a console:
+```bash
+sudo systemctl enable --now ssh
+```
+This is a backup way in, in case Pi Connect doesn't return after the reboot.
+```bash
+loginctl enable-linger
+```
+This keeps user services, including Pi Connect, running without a desktop login.
+```bash
+systemctl --user mask pipewire pipewire.socket pipewire-pulse pipewire-pulse.socket wireplumber
+```
+```bash
+sudo systemctl set-default multi-user.target
+```
+```bash
+sudo reboot
+```
+After the reboot, check again:
+```bash
+systemctl get-default; systemctl --user is-active pipewire
+```
+**Success looks like:** `multi-user.target`, then `inactive`. Continue with D2, which sets the jack as the default card.
+
+To undo: run `sudo systemctl set-default graphical.target`, then `systemctl --user unmask` with the same five unit names.
 
 ### D2. Get the code and install (Pi)
 Your Pi already has a read-only clone. Fetch the first real commit:
@@ -184,14 +227,28 @@ deploy/install.sh
 ```
 **Success looks like:** the apt install finishes, `visudo` reports `parsed OK`, and the script ends with `== Done. Next: ...`. Then **log out and back in** (or reboot) so the new `audio`/`gpio` groups apply.
 
-Set the default sound card. Use the card **name** from A3, normally `Headphones`:
+Set the default sound card, using the card **name** from A3 (normally `Headphones`). Don't use `defaults.pcm.card Headphones`: that setting only accepts a card number, and card numbers can change between boots.
 ```bash
-printf 'defaults.pcm.card Headphones\ndefaults.ctl.card Headphones\n' | sudo tee /etc/asound.conf
-amixer sset PCM 85%
-sudo alsactl store
-amixer sget PCM
+sudo tee /etc/asound.conf >/dev/null <<'EOF'
+pcm.!default {
+    type plug
+    slave.pcm "hw:CARD=Headphones,DEV=0"
+}
+ctl.!default {
+    type hw
+    card Headphones
+}
+EOF
 ```
-**Success looks like:** `amixer sget PCM` shows `Playback ... [85%]`. Now run the `speaker-test` from A3.
+```bash
+amixer sset PCM 85%
+```
+```bash
+sudo alsactl store Headphones
+```
+**Success looks like:** `amixer` prints `Mono: Playback ... [85%] ... [on]` with no `ALSA lib` errors, and `alsactl store` prints nothing. A plain `alsactl store` can fail with "Invalid argument" on the HDMI card when no monitor is attached; that's why it names `Headphones`. Now run the `speaker-test` from A3.
+
+If every ALSA command starts printing `/etc/asound.conf may be old or corrupted`, the file has a typo. Rewrite it with the block above.
 
 Self-check with the bundled example stations:
 ```bash
@@ -366,6 +423,7 @@ sudo systemctl restart radio
 ### J2. Troubleshooting
 | Symptom | Check |
 |---|---|
+| `speaker-test` finishes normally but is silent | Desktop image: PipeWire is sending sound to HDMI (D1a). Or `/etc/asound.conf` is missing and HDMI is card 0 (D2). |
 | No sound at all | `aplay -l` shows `Headphones`; `/etc/asound.conf` names it; `amixer sget PCM` isn't 0% or `[off]`; the speaker is powered and its knob is up; then `speaker-test -c 2 -t wav -l 1`. |
 | `--check` says `FAIL audio` | Another program is holding the sound card. Run `sudo systemctl stop radio` first. Then check `journalctl -u radio -b --no-pager \| tail -30`. |
 | Hiss | Normal for the Pi 2's analogue jack at high speaker gain. Keep the Pi's PCM at 85% and turn the speaker knob down. |
