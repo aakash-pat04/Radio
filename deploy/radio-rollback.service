@@ -1,0 +1,7 @@
+# Installed by deploy/install.sh. Triggered by radio.service's OnFailure=.
+[Unit]
+Description=Roll Five Years FM back to its known-good commit
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/radio-rollback @REPO@ @USER@

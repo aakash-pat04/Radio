@@ -1,0 +1,10 @@
+{
+  "stations": [
+    {"freq": "88.1", "name": "First Signal", "folder": "88.1-first-signal"},
+    {"freq": "90.5", "name": "Year One", "folder": "90.5-year-one"},
+    {"freq": "92.7", "name": "Our Best Days", "folder": "92.7-our-best-days"},
+    {"freq": "95.3", "name": "Little Things FM", "folder": "95.3-little-things-fm"},
+    {"freq": "98.9", "name": "The Love Letter", "folder": "98.9-the-love-letter"},
+    {"freq": "100.0", "name": "Future Frequency", "folder": "100.0-future-frequency"}
+  ]
+}

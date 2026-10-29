@@ -1,0 +1,18 @@
+# /etc/default/radio - Five Years FM overrides. Kept outside the repo, so
+# updates never overwrite it. Uncomment a line, then: sudo systemctl restart radio
+#
+# 2 for half-step encoders (see tools/encoder_test.py), 4 for most KY-040s.
+#RADIO_TRANSITIONS_PER_DETENT=4
+# 1 if turning clockwise moves the dial backwards.
+#RADIO_REVERSE=0
+# Media folder (default: ~/radio-media if it has stations.json, else the bundled example).
+#RADIO_MEDIA=/home/USER/radio-media
+# 1 to start a station's audio right after its ident, without a press.
+#RADIO_AUTOPLAY=0
+# 0 to stop at the ends of the dial instead of wrapping around.
+#RADIO_WRAP_DIAL=1
+#RADIO_DEFAULT_VOLUME=0.7
+#RADIO_LONG_PRESS_S=1.5
+#RADIO_SHUTDOWN_HOLD_S=8
+# Larger buffer if audio crackles (4096), smaller for snappier response (1024).
+#RADIO_BUFFER_FRAMES=2048

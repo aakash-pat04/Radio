@@ -1,0 +1,28 @@
+# Installed by deploy/install.sh, which replaces @USER@ and @REPO@.
+[Unit]
+Description=Five Years FM radio
+After=sound.target local-fs.target
+# Maintenance kill switch: create this file (e.g. from the Mac with the SD card
+# in a reader: touch /Volumes/bootfs/radio-disabled) and the radio won't start.
+ConditionPathExists=!/boot/firmware/radio-disabled
+# Five crashes within two minutes -> give up and roll back to known-good code.
+StartLimitIntervalSec=120
+StartLimitBurst=5
+OnFailure=radio-rollback.service
+
+[Service]
+Type=simple
+User=@USER@
+SupplementaryGroups=audio gpio
+WorkingDirectory=@REPO@
+Environment=PYTHONUNBUFFERED=1
+Environment=SDL_AUDIODRIVER=alsa
+Environment=SDL_VIDEODRIVER=dummy
+EnvironmentFile=-/etc/default/radio
+ExecStart=/usr/bin/python3 -m radio
+Restart=on-failure
+RestartSec=3
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target

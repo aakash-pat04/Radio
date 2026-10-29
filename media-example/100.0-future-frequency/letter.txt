@@ -1,0 +1,3 @@
+Placeholder for the final anniversary letter and future plans.
+Rev 1 plays this letter as a voice recording (put it in this folder as 01-letter.ogg);
+this text file is kept for the screen revision.

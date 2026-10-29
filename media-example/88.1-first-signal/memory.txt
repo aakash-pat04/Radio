@@ -1,0 +1,1 @@
+Placeholder memory for 88.1-first-signal. Not used in Rev 1 (no screen); kept for the screen revision.
