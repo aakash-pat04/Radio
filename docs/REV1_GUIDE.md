@@ -281,16 +281,16 @@ python3 -m radio --check
   tools/  deploy/  docs/  tests/
 ~/radio-media/                 YOUR media (not in git)
   stations.json
-  home/welcome.ogg             played at boot and when you press at home
+  home/welcome.wav             played at boot and when you press at home
   88.1-first-signal/
-    ident.ogg                  "You're listening to 88.1, First Signal"
-    01-song.ogg  02-story.ogg  played in filename order, looping
+    ident.wav                  "You're listening to 88.1, First Signal"
+    01-song.mp3  02-story.mp3  played in filename order, looping
     memory.txt  photos/        kept for the screen revision (ignored in Rev 1)
   ...
   100.0-future-frequency/
-    ident.ogg
-    01-letter.ogg              you reading the anniversary letter
-    02-future-plans.ogg
+    ident.wav
+    01-letter.mp3              you reading the anniversary letter
+    02-future-plans.mp3
     letter.txt                 for Rev 2
 ```
 `stations.json` lists the stations in dial order (copy `media-example/stations.json` to start). Each `folder` must match a directory name.
@@ -300,13 +300,34 @@ Recording tips:
 - Name them `ident.m4a`, `welcome.m4a`, `01-letter.m4a` and so on. Any of m4a, mp3, wav, aiff or flac is fine.
 - Leave half a second of silence at the start and end.
 
+Voice-over messages on songs: to say something over the start of a song, put the message next to the song with `.voice` before the extension:
+```
+88.1-first-signal/
+  02-our-song.mp3
+  02-our-song.voice.m4a
+```
+`prepare_media.sh` mixes each pair into one track:
+1. The song starts quietly (25% volume).
+2. Your message starts 0.5 s in.
+3. When the message ends, the song fades up to full volume over 2 s.
+
+To tune the mix, set any of these before the command, for example `DUCK_LEVEL=0.15 VOICE_GAIN=1.3 tools/prepare_media.sh ...`:
+- `VOICE_DELAY`: seconds of song before the message starts. The default is 0.5.
+- `DUCK_LEVEL`: song volume while you talk, where 1 is full volume. The default is 0.25.
+- `DUCK_FADE`: seconds for the song to fade back up. The default is 2.
+- `VOICE_GAIN`: message volume. The default is 1; use 1.3 for a bit louder.
+
+The names must match exactly apart from `.voice`. A `.voice` file with no matching song is skipped with a `WARN` line.
+
 Build the media on the Mac:
 ```bash
 brew install ffmpeg
 cp -R ~/Desktop/Projects/Radio/media-example ~/Desktop/radio-source   # start from the example, then replace files
 tools/prepare_media.sh ~/Desktop/radio-source ~/Desktop/radio-media
 ```
-**Success looks like:** an `audio ... -> ....ogg` line for every recording, then `Done: N audio file(s) converted`.
+**Success looks like:** an `audio ... -> ...` line for every recording, a `mixed ... (song back up at N s)` line for every voice-over pair, then `Done: ... 0 warning(s)`. Idents and the welcome become `.wav`; everything else becomes `.mp3`.
+
+Before re-running after changes, delete the old output with `rm -rf ~/Desktop/radio-media`, so files you removed from the source don't linger.
 
 Delete the placeholder `01-placeholder-tone.wav` and `ident.wav` files from the source before converting. Otherwise they stay in the playlist.
 
@@ -371,7 +392,7 @@ How it behaves:
   1. ALSA `PCM` is fixed at 85% (D2).
   2. The speaker knob is set once to a comfortable maximum.
   3. Everyday volume is hold-and-turn, saved across reboots.
-- Use OGG (from `prepare_media.sh`) for the lowest CPU load on the Pi 2. MP3 and WAV also play.
+- `prepare_media.sh` writes MP3 for tracks and WAV for idents and the welcome. Homebrew's ffmpeg no longer includes the OGG Vorbis encoder. The radio also plays OGG files made elsewhere.
 - **Bluetooth:** not in Rev 1 (see B2).
 
 ---
